@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+.venv/
+venv/
+env/
+
+# Environment and secrets (keep .env.example)
+.env
+*.env.local
+!.env.example
+
+# Data and uploads
+server/data/
+uploads/
+*.db
+*.db-journal
+
+# Build and IDE
+android/build/
+android/app/build/
+android/.gradle/
+*.iml
+.idea/
+.vscode/
+.cursor/
+
+# OS and Windows reserved names
+.DS_Store
+Thumbs.db
+nul
+NUL
+
+# Logs and temp
+*.log
+*.tmp
+*.temp
+.cache/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Optional: keep dymotest as reference but ignore its venv
+dymotest/.venv/
+
+# Third-party SDK (optional: remove this line to include DymoSDK in repo)
+DymoSDK/

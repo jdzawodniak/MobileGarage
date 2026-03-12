@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <PlatformTarget>x86</PlatformTarget>
+    <AssemblyName>DymoPrint</AssemblyName>
+    <RootNamespace>DymoPrintCli</RootNamespace>
+    <Configurations>Debug;Release</Configurations>
+    <Platforms>x86</Platforms>
+  </PropertyGroup>
+  <ItemGroup>
+    <COMReference Include="Dymo">
+      <Guid>{DC8A996F-111D-42E2-BACF-EEC86F53B454}</Guid>
+      <VersionMajor>1</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>false</Isolated>
+    </COMReference>
+  </ItemGroup>
+</Project>

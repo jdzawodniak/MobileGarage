@@ -1,0 +1,13 @@
+{
+  "name": "mobile-garage",
+  "private": true,
+  "description": "Mobile Garage Inventory – server + print service",
+  "scripts": {
+    "start": "concurrently -n server,print -c blue,green \"npm run start:server\" \"npm run start:print\"",
+    "start:server": "cd server && npm run dev",
+    "start:print": "node print-service/src/index.js"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

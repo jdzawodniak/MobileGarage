@@ -1,0 +1,1 @@
+# Place DymoPrint.exe here (build from print-service/dymo-print-cli), or set DYMO_CLI_PATH in .env to the exe path.

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory - Mobile Garage</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Inventory</h1>
+    <nav>
+      <a href="#" data-view="search">Search</a>
+      <a href="#" data-view="locations">Locations</a>
+      <a href="#" data-view="items">Items</a>
+      <a href="#" data-view="add-storage">Add Storage</a>
+      <a href="#" data-view="add-item">Add Item</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="view-search" class="view active">
+      <h2>Search</h2>
+      <input type="search" id="search-input" placeholder="Search items or locations...">
+      <div id="search-results"></div>
+    </section>
+
+    <section id="view-locations" class="view">
+      <h2>Locations</h2>
+      <div class="filters">
+        <select id="filter-building"><option value="">All buildings</option></select>
+        <select id="filter-type"><option value="">All types</option></select>
+      </div>
+      <div id="locations-list"></div>
+    </section>
+
+    <section id="view-items" class="view">
+      <h2>Items</h2>
+      <input type="search" id="items-search" placeholder="Filter by name or notes...">
+      <div id="items-list"></div>
+    </section>
+
+    <section id="view-add-storage" class="view">
+      <h2>Add Storage Unit</h2>
+      <form id="form-storage">
+        <label>Building (e.g. RS, WS)<input type="text" name="building_code" placeholder="RS" required></label>
+        <label>Type (Rack, Cabinet, Bag)<input type="text" name="storage_type" placeholder="Rack" required></label>
+        <label>Identifier (A, B, C)<input type="text" name="storage_id" placeholder="A" required></label>
+        <label>Spaces (1–24)<input type="number" name="spaces_count" min="1" max="24" value="24" required></label>
+        <label>Description (optional)<input type="text" name="description"></label>
+        <button type="submit">Create & Print Large Label</button>
+      </form>
+      <div id="storage-result"></div>
+    </section>
+
+    <section id="view-add-item" class="view">
+      <h2>Add Item</h2>
+      <form id="form-item">
+        <label>Item name<input type="text" name="name" required></label>
+        <label>Location<select name="location_id" id="item-location-select"></select></label>
+        <label>Print to roll<select name="printer_roll" id="item-printer-roll">
+          <option value="left">Left roll</option>
+          <option value="right">Right roll</option>
+          <option value="both">Both rolls</option>
+          <option value="test_left">Test connection (left) – WMI test page</option>
+        </select></label>
+        <label>Notes (optional)<input type="text" name="notes"></label>
+        <label>
+          Photo (optional)
+          <input type="file" id="item-photo" accept="image/*" style="margin-top:0.25rem">
+          <span id="photo-uploaded" class="muted"></span>
+        </label>
+        <button type="submit">Create & Print Small Label</button>
+      </form>
+      <div id="item-result"></div>
+    </section>
+
+    <section id="view-location-detail" class="view">
+      <h2 id="location-detail-title"></h2>
+      <div id="location-detail-content"></div>
+      <button id="reprint-large">Reprint large label</button>
+    </section>
+
+    <section id="view-item-detail" class="view">
+      <h2 id="item-detail-title"></h2>
+      <div id="item-detail-content"></div>
+      <button id="reprint-small">Reprint small label</button>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

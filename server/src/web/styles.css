@@ -1,0 +1,83 @@
+:root {
+  --bg: #1a1a2e;
+  --card: #16213e;
+  --accent: #0f3460;
+  --text: #e8e8e8;
+  --muted: #a0a0a0;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+header {
+  background: var(--card);
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+header h1 { margin: 0; font-size: 1.25rem; }
+nav { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+nav a {
+  color: var(--muted);
+  text-decoration: none;
+  padding: 0.35rem 0.6rem;
+  border-radius: 4px;
+}
+nav a:hover { color: var(--text); background: var(--accent); }
+
+main { padding: 1.5rem; max-width: 900px; margin: 0 auto; }
+
+.view { display: none; }
+.view.active { display: block; }
+
+h2 { margin-top: 0; font-size: 1.1rem; color: var(--muted); }
+input, select, button {
+  font: inherit;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--text);
+}
+input::placeholder { color: var(--muted); }
+button {
+  cursor: pointer;
+  background: var(--accent);
+  border: none;
+  margin-top: 0.5rem;
+}
+button:hover { filter: brightness(1.15); }
+#search-input, #items-search { width: 100%; max-width: 400px; margin-bottom: 1rem; }
+
+form label { display: block; margin-bottom: 0.75rem; }
+form label input, form label select { display: block; width: 100%; max-width: 320px; margin-top: 0.25rem; }
+
+.card {
+  background: var(--card);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  border-left: 4px solid var(--accent);
+}
+.card h3 { margin: 0 0 0.25rem 0; font-size: 0.95rem; }
+.card p { margin: 0; font-size: 0.85rem; color: var(--muted); }
+.card a { color: #7eb8da; text-decoration: none; }
+.card a:hover { text-decoration: underline; }
+
+.filters { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.filters select { min-width: 120px; }
+
+#search-results .card { cursor: pointer; }
+#search-results .card:hover { background: #1e2d4a; }
+
+.error { color: #e57373; font-size: 0.9rem; }
+.success { color: #81c784; font-size: 0.9rem; margin-top: 0.5rem; }
