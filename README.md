@@ -2,11 +2,17 @@
 
 Replacement for SmartSuite-based shop inventory: Android app, Node backend, SQLite, and automatic label printing (DYMO LabelWriter 450 Twin Turbo on Windows).
 
-## Repository
+## Repository and backup
 
-- **Remote:** Add your Git remote and push:  
-  `git remote add origin https://github.com/YOUR_USERNAME/MobileGarage.git`  
-  then `git push -u origin main`.
+This project is a Git repo (branch `main`). To back it up to your **MobileGarage** remote:
+
+```bash
+git remote add origin https://github.com/YOUR_USERNAME/MobileGarage.git
+git push -u origin main
+```
+
+Replace `YOUR_USERNAME` with your GitHub (or Git host) username. If the repo is empty, the push will create the branch and upload all files. `.env` files and `node_modules`/`.venv` are gitignored.
+
 - **Docs:** [DYMO_SETUP.md](DYMO_SETUP.md) – DYMO printer setup, Python COM, and print-service config.
 
 ## Phase 1 – Environment & Core Functions
