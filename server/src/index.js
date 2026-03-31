@@ -9,6 +9,7 @@ import locationsRouter from './routes/locations.js';
 import itemsRouter from './routes/items.js';
 import photosRouter from './routes/photos.js';
 import printJobsRouter from './routes/printJobs.js';
+import settingsRouter from './routes/settings.js';
 import { db } from './db/index.js';
 import { schema } from './db/schema.js';
 
@@ -49,6 +50,7 @@ app.use('/api/locations', locationsRouter);
 app.use('/api/items', itemsRouter);
 app.use('/api/photos', photosRouter);
 app.use('/api/print-jobs', printJobsRouter);
+app.use('/api/settings', settingsRouter);
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, db: 'connected' });

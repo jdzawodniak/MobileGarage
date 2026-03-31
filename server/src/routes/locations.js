@@ -27,7 +27,7 @@ router.get('/', (req, res) => {
 
 router.get('/:id', (req, res) => {
   const row = db.prepare(`
-    SELECT l.*, su.building_code, su.storage_type, su.storage_id
+    SELECT l.*, su.id as storage_unit_id, su.building_code, su.storage_type, su.storage_id
     FROM locations l
     JOIN storage_units su ON l.storage_unit_id = su.id
     WHERE l.id = ?
@@ -50,6 +50,21 @@ router.patch('/:id', (req, res) => {
   db.prepare(`UPDATE locations SET ${updates.join(', ')} WHERE id = ?`).run(...params);
   const row = db.prepare('SELECT * FROM locations WHERE id = ?').get(req.params.id);
   res.json(row);
+});
+
+router.delete('/:id', (req, res) => {
+  const id = req.params.id;
+  const itemCount = db
+    .prepare('SELECT COUNT(*) as cnt FROM items WHERE location_id = ?')
+    .get(id).cnt;
+  if (itemCount > 0) {
+    return res
+      .status(400)
+      .json({ error: 'Cannot delete location while it still has items. Delete or move items first.' });
+  }
+  const result = db.prepare('DELETE FROM locations WHERE id = ?').run(id);
+  if (result.changes === 0) return res.status(404).json({ error: 'Location not found' });
+  res.status(204).send();
 });
 
 export default router;

@@ -24,6 +24,8 @@ dotenv.config({ path: printServiceEnv });
  *
  * DYMO SDK path (recommended for Twin Turbo): set DYMO_CLI_PATH and DYMO_LABEL_TEMPLATE
  * to use the DymoPrint CLI (DLS COM) for small labels and Test connection (left).
+ * For large (storage) labels, set DYMO_LARGE_LABEL_PATH (or DYMO_LARGE_LABEL_TEMPLATE)
+ * to point to your big-label .label file.
  */
 
 const API_URL = process.env.API_URL || 'http://localhost:3011';
@@ -37,11 +39,13 @@ const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS, 10) || 5000;
 // DYMO SDK path: when set, small labels and test_left use DymoPrint CLI (DLS COM) instead of PrintTo/WMI
 const DYMO_CLI_PATH = process.env.DYMO_CLI_PATH || '';
 const DYMO_LABEL_TEMPLATE = process.env.DYMO_LABEL_TEMPLATE || process.env.DYMO_LABEL_PATH || '';
+const DYMO_LARGE_LABEL_TEMPLATE =
+  process.env.DYMO_LARGE_LABEL_TEMPLATE || process.env.DYMO_LARGE_LABEL_PATH || '';
 const DYMO_TEST_LABEL_TEMPLATE = process.env.DYMO_TEST_LABEL_TEMPLATE || DYMO_LABEL_TEMPLATE;
 const DYMO_OBJNAME_ITEM = process.env.DYMO_OBJNAME_ITEM || 'ItemName';
 const DYMO_OBJNAME_LOCATION = process.env.DYMO_OBJNAME_LOCATION || 'Location';
 
-const useDymoCli = Boolean(DYMO_CLI_PATH && DYMO_LABEL_TEMPLATE);
+const useDymoCli = Boolean(DYMO_CLI_PATH && (DYMO_LABEL_TEMPLATE || DYMO_LARGE_LABEL_TEMPLATE));
 
 // Small (item) labels: we print by opening the .label file, substituting field1/field2, and sending to DYMO via COM.
 // That is done by the Python module (mobile_garage.printing). We use it whenever a label path is set.
@@ -162,16 +166,49 @@ async function processJob(job) {
   const labelText = formatLabel(job, payload);
 
   if (job.job_type === 'large') {
+    const storageCode =
+      payload.building_code && payload.storage_id
+        ? `${payload.building_code}-${payload.storage_type || 'Rack'}-${payload.storage_id}`
+        : `Storage Unit #${job.reference_id}`;
+    const spacesLine = `Spaces 1-${payload.spaces_count || 24}`;
+
+    // Prefer a dedicated large-label DYMO template if configured.
+    if (useDymoCli && (DYMO_LARGE_LABEL_TEMPLATE || DYMO_LABEL_TEMPLATE) && (SMALL_PRINTER_RIGHT || SMALL_PRINTER)) {
+      const printerName = SMALL_PRINTER_RIGHT || SMALL_PRINTER;
+      const templatePath = resolveTemplatePath(DYMO_LARGE_LABEL_TEMPLATE || DYMO_LABEL_TEMPLATE);
+      const objData = [
+        { name: DYMO_OBJNAME_ITEM, value: storageCode },
+        { name: DYMO_OBJNAME_LOCATION, value: spacesLine },
+      ];
+      console.log(
+        `[PRINT] Sending LARGE job ${job.id} to right roll via DymoPrint CLI: "${printerName}" – template: ${templatePath}`
+      );
+      try {
+        // tray 1 = right roll
+        await printViaDymoCli(printerName, 1, templatePath, objData);
+        console.log(`[OK] Sent large label (job ${job.id}) to right roll via DymoPrint CLI`);
+        return true;
+      } catch (err) {
+        console.error('DymoPrint CLI large-label error (right roll):', err.message || err);
+        return false;
+      }
+    }
+
+    // Fallback: legacy large-printer path using plain text + PrintTo
     if (!LARGE_PRINTER) {
-      console.log(`[DRY-RUN] Would print to large printer:\n${labelText}`);
+      console.log(
+        `[DRY-RUN] Would print large label via legacy large printer:\n${labelText}`
+      );
       return true;
     }
     try {
       await printToPrinter(LARGE_PRINTER, labelText);
-      console.log(`[OK] Sent large label (job ${job.id}) to "${LARGE_PRINTER}"`);
+      console.log(
+        `[OK] Sent large label (job ${job.id}) to legacy large printer "${LARGE_PRINTER}"`
+      );
       return true;
     } catch (err) {
-      console.error('Print error:', err.message || err);
+      console.error('Legacy large-printer print error:', err.message || err);
       return false;
     }
   }

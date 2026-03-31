@@ -76,4 +76,28 @@ router.post('/', (req, res) => {
   res.status(201).json({ ...unit, locations });
 });
 
+router.delete('/:id', (req, res) => {
+  const id = req.params.id;
+  const itemCount = db
+    .prepare(
+      `
+      SELECT COUNT(*) as cnt
+      FROM items i
+      JOIN locations l ON i.location_id = l.id
+      WHERE l.storage_unit_id = ?
+    `
+    )
+    .get(id).cnt;
+  if (itemCount > 0) {
+    return res.status(400).json({
+      error:
+        'Cannot delete storage area while any of its locations still have items. Delete or move items first.',
+    });
+  }
+  db.prepare('DELETE FROM locations WHERE storage_unit_id = ?').run(id);
+  const result = db.prepare('DELETE FROM storage_units WHERE id = ?').run(id);
+  if (result.changes === 0) return res.status(404).json({ error: 'Storage unit not found' });
+  res.status(204).send();
+});
+
 export default router;

@@ -15,6 +15,18 @@ Replace `YOUR_USERNAME` with your GitHub (or Git host) username. If the repo is 
 
 - **Docs:** [DYMO_SETUP.md](DYMO_SETUP.md) – DYMO printer setup, Python COM, and print-service config.
 
+## Running the environment (Windows batch launcher)
+
+You can launch the full environment from the project root with:
+
+```bat
+start_mobile_garage.bat
+```
+
+This runs `npm run start` and starts:
+- Inventory server (web UI + API)
+- Print service
+
 ## Phase 1 – Environment & Core Functions
 
 ### Project structure
@@ -38,6 +50,19 @@ npm start            # runs server + print service in one terminal
 
 - Server: http://localhost:3011 (Web UI and API)
 - Print service: polls for jobs and prints item labels via Python DYMO when `DYMO_LABEL_PATH` is set in `print-service/.env` (see [DYMO_SETUP.md](DYMO_SETUP.md))
+
+### Settings menu (template navigation)
+
+The Web UI now includes a **Settings** view where you can:
+- See the resolved small and large label template paths
+- See whether each template file exists
+- Open Explorer directly to the small template file
+- Open Explorer directly to the large template file
+- Open Explorer to `print-service/.env`
+
+Template env variables used by the app:
+- `DYMO_LABEL_PATH` or `DYMO_LABEL_TEMPLATE` for small/item labels
+- `DYMO_LARGE_LABEL_PATH` or `DYMO_LARGE_LABEL_TEMPLATE` for large/storage labels
 
 **Or run separately**
 

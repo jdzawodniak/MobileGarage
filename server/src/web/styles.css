@@ -81,3 +81,46 @@ form label input, form label select { display: block; width: 100%; max-width: 32
 
 .error { color: #e57373; font-size: 0.9rem; }
 .success { color: #81c784; font-size: 0.9rem; margin-top: 0.5rem; }
+
+.muted { color: var(--muted); font-size: 0.9rem; }
+
+table.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+
+table.table th,
+table.table td {
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid #23314a;
+  font-size: 0.85rem;
+}
+
+table.table tbody tr:hover {
+  background: #1e2d4a;
+}
+
+button.danger {
+  background: #c62828;
+}
+
+button.danger:hover {
+  filter: brightness(1.1);
+}
+
+#view-add-storage input::placeholder {
+  color: #4da3ff;
+}
+
+.settings-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+#settings-template-status p {
+  margin: 0.35rem 0;
+}

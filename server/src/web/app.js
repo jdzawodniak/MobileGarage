@@ -1,5 +1,7 @@
 const API = '/api';
 
+let allItemsForSearch = [];
+
 async function fetchJson(path, opts = {}) {
   const r = await fetch(API + path, {
     ...opts,
@@ -18,11 +20,71 @@ function showView(id) {
   if (el) el.classList.add('active');
 }
 
+async function loadSearchView() {
+  const input = document.getElementById('search-input');
+  const q = input ? input.value : '';
+  allItemsForSearch = await fetchJson('/items');
+  renderSearchTable(q || '');
+}
+
+function renderSearchTable(query) {
+  const container = document.getElementById('search-results');
+  if (!container) return;
+  const term = String(query || '').trim().toLowerCase();
+  const rows = term
+    ? allItemsForSearch.filter((i) => {
+        const name = (i.name || '').toLowerCase();
+        const loc = (i.location_code || '').toLowerCase();
+        const notes = (i.notes ? String(i.notes) : '').toLowerCase();
+        return name.includes(term) || loc.includes(term) || notes.includes(term);
+      })
+    : allItemsForSearch;
+
+  if (!rows.length) {
+    container.innerHTML = '<p class="muted">No items match your search.</p>';
+    return;
+  }
+
+  container.innerHTML = `
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Location</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows
+          .map(
+            (i) => `
+          <tr data-id="${i.id}">
+            <td>${i.name}</td>
+            <td>${i.location_code || ''}</td>
+            <td>${i.notes || ''}</td>
+          </tr>
+        `
+          )
+          .join('')}
+      </tbody>
+    </table>
+  `;
+
+  container.querySelectorAll('tbody tr').forEach((tr) => {
+    tr.addEventListener('click', () => {
+      const id = tr.dataset.id;
+      if (id) showItemDetail(id);
+    });
+  });
+}
+
 // Search
 document.querySelectorAll('[data-view]').forEach((a) => {
   a.addEventListener('click', (e) => {
     e.preventDefault();
     showView(a.dataset.view);
+    if (a.dataset.view === 'search') loadSearchView();
+    if (a.dataset.view === 'settings') loadSettingsView();
     if (a.dataset.view === 'locations') loadLocations();
     if (a.dataset.view === 'items') loadItems();
     if (a.dataset.view === 'add-item') loadLocationOptions();
@@ -42,27 +104,14 @@ async function loadFilters() {
 }
 
 document.getElementById('search-input').addEventListener('input', debounce(async () => {
-  const q = document.getElementById('search-input').value.trim();
-  const container = document.getElementById('search-results');
-  if (!q) { container.innerHTML = ''; return; }
   try {
-    const [locs, items] = await Promise.all([
-      fetchJson(`/locations?q=${encodeURIComponent(q)}`),
-      fetchJson(`/items?q=${encodeURIComponent(q)}`),
-    ]);
-    container.innerHTML = [
-      ...locs.map((l) => `<div class="card" data-type="location" data-id="${l.id}"><h3>${l.location_code}</h3><p>${l.description || 'Location'}</p></div>`),
-      ...items.map((i) => `<div class="card" data-type="item" data-id="${i.id}"><h3>${i.name}</h3><p>${i.location_code}</p></div>`),
-    ].join('');
-    container.querySelectorAll('.card').forEach((c) => {
-      c.addEventListener('click', () => {
-        if (c.dataset.type === 'location') showLocationDetail(c.dataset.id);
-        else showItemDetail(c.dataset.id);
-      });
-    });
+    allItemsForSearch = await fetchJson('/items');
   } catch (e) {
-    container.innerHTML = `<p class="error">${e.message}</p>`;
+    document.getElementById('search-results').innerHTML = `<p class="error">${e.message}</p>`;
+    return;
   }
+  const q = document.getElementById('search-input').value.trim();
+  renderSearchTable(q);
 }, 300));
 
 async function loadLocations() {
@@ -112,7 +161,19 @@ async function showLocationDetail(id) {
   document.getElementById('location-detail-content').querySelectorAll('[data-item]').forEach((a) => {
     a.addEventListener('click', (e) => { e.preventDefault(); showItemDetail(a.dataset.item); });
   });
-  document.getElementById('reprint-large').dataset.id = id;
+  const reprintBtn = document.getElementById('reprint-large');
+  if (reprintBtn) {
+    reprintBtn.dataset.storageUnitId = loc.storage_unit_id != null ? String(loc.storage_unit_id) : '';
+    reprintBtn.dataset.locationId = String(id);
+  }
+  const deleteLocBtn = document.getElementById('delete-location');
+  if (deleteLocBtn) {
+    deleteLocBtn.dataset.id = String(id);
+  }
+  const deleteStorageBtn = document.getElementById('delete-storage-unit');
+  if (deleteStorageBtn) {
+    deleteStorageBtn.dataset.id = loc.storage_unit_id != null ? String(loc.storage_unit_id) : '';
+  }
   showView('location-detail');
 }
 
@@ -124,15 +185,24 @@ async function showItemDetail(id) {
     <p>${item.notes || ''}</p>
   `;
   document.getElementById('reprint-small').dataset.id = id;
+  const deleteItemBtn = document.getElementById('delete-item');
+  if (deleteItemBtn) {
+    deleteItemBtn.dataset.id = String(id);
+  }
   showView('item-detail');
 }
 
 document.getElementById('reprint-large').addEventListener('click', async () => {
-  const id = document.getElementById('reprint-large').dataset.id;
+  const btn = document.getElementById('reprint-large');
+  const storageId = btn.dataset.storageUnitId || btn.dataset.id;
+  if (!storageId) {
+    alert('No storage unit found for this location.');
+    return;
+  }
   try {
     await fetchJson('/print-jobs/reprint', {
       method: 'POST',
-      body: JSON.stringify({ job_type: 'large', reference_type: 'location', reference_id: parseInt(id, 10) }),
+      body: JSON.stringify({ job_type: 'large', reference_type: 'storage_unit', reference_id: parseInt(storageId, 10) }),
     });
     alert('Reprint queued.');
   } catch (e) { alert(e.message); }
@@ -148,6 +218,74 @@ document.getElementById('reprint-small').addEventListener('click', async () => {
     alert('Reprint queued.');
   } catch (e) { alert(e.message); }
 });
+
+const deleteLocationBtn = document.getElementById('delete-location');
+if (deleteLocationBtn) {
+  deleteLocationBtn.addEventListener('click', async () => {
+    const id = deleteLocationBtn.dataset.id;
+    if (!id) return;
+    if (!confirm('Delete this location? All items must already be deleted or moved elsewhere.')) return;
+    try {
+      const r = await fetch(API + '/locations/' + id, { method: 'DELETE' });
+      if (!r.ok && r.status !== 204) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || 'Delete failed');
+      }
+      alert('Location and its items deleted.');
+      showView('locations');
+      loadLocations();
+    } catch (e) {
+      alert(e.message);
+    }
+  });
+}
+
+const deleteStorageUnitBtn = document.getElementById('delete-storage-unit');
+if (deleteStorageUnitBtn) {
+  deleteStorageUnitBtn.addEventListener('click', async () => {
+    const id = deleteStorageUnitBtn.dataset.id;
+    if (!id) return;
+    if (!confirm('Delete this entire storage area? All items in its locations must already be deleted or moved.')) return;
+    try {
+      const r = await fetch(API + '/storage-units/' + id, { method: 'DELETE' });
+      if (!r.ok && r.status !== 204) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || 'Delete failed');
+      }
+      alert('Storage area, its locations, and items deleted.');
+      showView('locations');
+      loadFilters();
+      loadLocations();
+    } catch (e) {
+      alert(e.message);
+    }
+  });
+}
+
+const deleteItemBtn = document.getElementById('delete-item');
+if (deleteItemBtn) {
+  deleteItemBtn.addEventListener('click', async () => {
+    const id = deleteItemBtn.dataset.id;
+    if (!id) return;
+    if (!confirm('Delete this item? This cannot be undone.')) return;
+    try {
+      const r = await fetch(API + '/items/' + id, { method: 'DELETE' });
+      if (!r.ok && r.status !== 204) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || 'Delete failed');
+      }
+      alert('Item deleted.');
+      allItemsForSearch = [];
+      showView('items');
+      loadItems();
+    } catch (e) {
+      alert(e.message);
+    }
+  });
+}
+
+// Initial load for search view table
+loadSearchView().catch(() => {});
 
 async function loadLocationOptions() {
   const locs = await fetchJson('/locations');
@@ -210,10 +348,74 @@ document.getElementById('form-item').addEventListener('submit', async (e) => {
     fileInput.value = '';
     document.getElementById('photo-uploaded').textContent = '';
     loadLocationOptions();
+    allItemsForSearch = [];
   } catch (err) {
     result.innerHTML = `<p class="error">${err.message}</p>`;
   }
 });
+
+async function loadSettingsView() {
+  const status = document.getElementById('settings-template-status');
+  if (!status) return;
+  try {
+    const data = await fetchJson('/settings/templates');
+    const small = data.small || {};
+    const large = data.large || {};
+    status.innerHTML = `
+      <p><strong>Small template:</strong> ${small.path || '(not configured)'}</p>
+      <p><strong>Small template exists:</strong> ${small.exists ? 'Yes' : 'No'}</p>
+      <p><strong>Large template:</strong> ${large.path || '(not configured)'}</p>
+      <p><strong>Large template exists:</strong> ${large.exists ? 'Yes' : 'No'}</p>
+      <p><strong>Env file:</strong> ${data.env_path || ''}</p>
+    `;
+  } catch (err) {
+    status.innerHTML = `<p class="error">${err.message}</p>`;
+  }
+}
+
+const settingsRefreshBtn = document.getElementById('settings-refresh');
+if (settingsRefreshBtn) {
+  settingsRefreshBtn.addEventListener('click', () => loadSettingsView());
+}
+
+const openSmallTemplateBtn = document.getElementById('open-small-template');
+if (openSmallTemplateBtn) {
+  openSmallTemplateBtn.addEventListener('click', async () => {
+    try {
+      await fetchJson('/settings/open-template', {
+        method: 'POST',
+        body: JSON.stringify({ type: 'small' }),
+      });
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+const openLargeTemplateBtn = document.getElementById('open-large-template');
+if (openLargeTemplateBtn) {
+  openLargeTemplateBtn.addEventListener('click', async () => {
+    try {
+      await fetchJson('/settings/open-template', {
+        method: 'POST',
+        body: JSON.stringify({ type: 'large' }),
+      });
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+const openTemplateEnvBtn = document.getElementById('open-template-env');
+if (openTemplateEnvBtn) {
+  openTemplateEnvBtn.addEventListener('click', async () => {
+    try {
+      await fetchJson('/settings/open-template-env', { method: 'POST' });
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
 
 function debounce(fn, ms) {
   let t;
