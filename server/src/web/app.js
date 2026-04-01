@@ -1,6 +1,9 @@
 const API = '/api';
 
 let allItemsForSearch = [];
+/** JPEG blob from PC webcam capture (Add Item); cleared when a file is chosen or after submit. */
+let itemWebcamBlob = null;
+let webcamStream = null;
 
 /** Safe URL for a stored photo_path (relative to server/uploads). */
 function uploadsUrl(photoPath) {
@@ -317,6 +320,113 @@ async function loadLocationOptions() {
   sel.innerHTML = locs.map((l) => `<option value="${l.id}">${l.location_code}</option>`).join('');
 }
 
+function closeWebcamModal() {
+  const modal = document.getElementById('webcam-modal');
+  const video = document.getElementById('webcam-video');
+  if (!modal) return;
+  modal.classList.remove('is-open');
+  modal.setAttribute('aria-hidden', 'true');
+  if (webcamStream) {
+    webcamStream.getTracks().forEach((t) => t.stop());
+    webcamStream = null;
+  }
+  if (video) video.srcObject = null;
+}
+
+async function openWebcamModal() {
+  const modal = document.getElementById('webcam-modal');
+  const video = document.getElementById('webcam-video');
+  const errEl = document.getElementById('webcam-error');
+  if (!modal || !video) return;
+  if (!navigator.mediaDevices?.getUserMedia) {
+    alert(
+      'Camera is not available here. Use “Choose file” instead, or open this site on HTTPS or localhost.',
+    );
+    return;
+  }
+  if (errEl) {
+    errEl.hidden = true;
+    errEl.textContent = '';
+  }
+  modal.classList.add('is-open');
+  modal.setAttribute('aria-hidden', 'false');
+  try {
+    webcamStream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    });
+    video.srcObject = webcamStream;
+    await video.play().catch(() => {});
+  } catch (e) {
+    if (errEl) {
+      errEl.textContent =
+        e.message ||
+        'Could not access the camera. Allow permission, close other apps using it, and use HTTPS or localhost.';
+      errEl.hidden = false;
+    }
+  }
+}
+
+(function initWebcamItemPhoto() {
+  const btnOpen = document.getElementById('item-photo-webcam');
+  const btnCap = document.getElementById('webcam-capture');
+  const btnCancel = document.getElementById('webcam-cancel');
+  const backdrop = document.getElementById('webcam-modal-backdrop');
+  const fileInput = document.getElementById('item-photo');
+  const status = document.getElementById('photo-uploaded');
+  if (!btnOpen) return;
+
+  btnOpen.addEventListener('click', () => openWebcamModal());
+  btnCancel?.addEventListener('click', () => closeWebcamModal());
+  backdrop?.addEventListener('click', () => closeWebcamModal());
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('webcam-modal')?.classList.contains('is-open')) {
+      closeWebcamModal();
+    }
+  });
+
+  btnCap?.addEventListener('click', () => {
+    const video = document.getElementById('webcam-video');
+    const canvas = document.getElementById('webcam-canvas');
+    const errEl = document.getElementById('webcam-error');
+    if (!video || !canvas || !webcamStream) return;
+    if (!video.videoWidth) {
+      if (errEl) {
+        errEl.textContent = 'Camera preview is not ready yet.';
+        errEl.hidden = false;
+      }
+      return;
+    }
+    if (errEl) errEl.hidden = true;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          if (errEl) {
+            errEl.textContent = 'Could not capture image.';
+            errEl.hidden = false;
+          }
+          return;
+        }
+        itemWebcamBlob = blob;
+        if (fileInput) fileInput.value = '';
+        if (status) status.textContent = 'Webcam photo ready';
+        closeWebcamModal();
+      },
+      'image/jpeg',
+      0.92,
+    );
+  });
+
+  fileInput?.addEventListener('change', () => {
+    const f = fileInput.files?.[0];
+    itemWebcamBlob = null;
+    if (status) status.textContent = f ? `Selected: ${f.name}` : '';
+  });
+})();
+
 document.getElementById('form-storage').addEventListener('submit', async (e) => {
   e.preventDefault();
   const fd = new FormData(e.target);
@@ -349,9 +459,13 @@ document.getElementById('form-item').addEventListener('submit', async (e) => {
   const fileInput = document.getElementById('item-photo');
   try {
     let photoPath = null;
-    if (fileInput.files?.[0]) {
+    if (itemWebcamBlob || fileInput.files?.[0]) {
       const formData = new FormData();
-      formData.append('photo', fileInput.files[0]);
+      if (itemWebcamBlob) {
+        formData.append('photo', itemWebcamBlob, 'webcam.jpg');
+      } else {
+        formData.append('photo', fileInput.files[0]);
+      }
       const up = await fetch(API + '/photos', { method: 'POST', body: formData });
       const body = await up.json().catch(() => ({}));
       if (!up.ok) {
@@ -371,6 +485,7 @@ document.getElementById('form-item').addEventListener('submit', async (e) => {
     });
     result.innerHTML = `<p class="success">Item created. Small label queued. (${res.name} @ ${res.location_code})</p>`;
     e.target.reset();
+    itemWebcamBlob = null;
     fileInput.value = '';
     document.getElementById('photo-uploaded').textContent = '';
     loadLocationOptions();

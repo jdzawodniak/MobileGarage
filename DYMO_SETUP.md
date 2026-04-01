@@ -2,6 +2,8 @@
 
 This project includes support for printing labels to a **DYMO LabelWriter 450 Twin Turbo** using **Python + COM** on Windows. This document explains how to set up the environment and how to run the included smoke-test script.
 
+**New machine:** start with **[INSTALL.md](INSTALL.md)** for Node, `install-requirements.ps1`, and `print-service/.env`. Use this file for DYMO software, Python bitness, `.label` field names, and COM troubleshooting.
+
 ### 1. Platform and Python Requirements
 
 - **OS**: Windows only. DYMO’s COM API is Windows‑only.

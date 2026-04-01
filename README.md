@@ -2,6 +2,17 @@
 
 Replacement for SmartSuite-based shop inventory: Android app, Node backend, SQLite, and automatic label printing (DYMO LabelWriter 450 Twin Turbo on Windows).
 
+## Documentation
+
+| Doc | What it covers |
+|-----|----------------|
+| **[INSTALL.md](INSTALL.md)** | **Full installation** from scratch: prerequisites, `install-requirements.ps1`, `.env` files, start/verify, Android, firewall, troubleshooting |
+| [DYMO_SETUP.md](DYMO_SETUP.md) | DYMO LabelWriter, Python COM, `.label` templates |
+| [PRINT_SETUP.md](PRINT_SETUP.md) | Print service, DymoPrint CLI, Windows printer names |
+| [PUSH_TO_GITHUB.md](PUSH_TO_GITHUB.md) | Publishing the repo to GitHub |
+
+**Quick path:** clone the repo → run **`.\install-requirements.ps1`** from the project root (PowerShell) → copy **`server/.env.example`** and **`print-service/.env.example`** to **`.env`** and edit → run **`npm start`** or **`start_mobile_garage.bat`**. Details are in [INSTALL.md](INSTALL.md).
+
 ## Repository and backup
 
 This project is a Git repo (branch `main`). To back it up to your **MobileGarage** remote:
@@ -13,8 +24,7 @@ git push -u origin main
 
 Replace `YOUR_USERNAME` with your GitHub (or Git host) username. If the repo is empty, the push will create the branch and upload all files. `.env` files and `node_modules`/`.venv` are gitignored.
 
-- **Docs:** [DYMO_SETUP.md](DYMO_SETUP.md) – DYMO printer setup, Python COM, and print-service config.
-- **Backups (Windows):** [scripts/backup-db-to-drive.ps1](scripts/backup-db-to-drive.ps1) (SQLite) and [scripts/backup-photos-to-drive.ps1](scripts/backup-photos-to-drive.ps1) (uploads). See sections below.
+- **Backups (Windows):** [scripts/backup-db-to-drive.ps1](scripts/backup-db-to-drive.ps1) (SQLite) and [scripts/backup-photos-to-drive.ps1](scripts/backup-photos-to-drive.ps1) (uploads). See sections below. Printer setup: [DYMO_SETUP.md](DYMO_SETUP.md), [PRINT_SETUP.md](PRINT_SETUP.md).
 
 ## Google Drive backups at a glance
 
@@ -102,7 +112,7 @@ On upload, the server normalizes images with **sharp** (installed with the serve
 - **max 800px on the longest side** (no upscaling)
 - **quality 65**
 
-Unsupported or corrupt uploads return `400` with `Invalid or unsupported image format`. The API still returns `{ path, url }` on success; paths end in `.jpg` after processing.
+Unsupported or corrupt uploads return `400` with an error message (the server tries HEIC-aware and JPEG fallbacks; see [INSTALL.md](INSTALL.md) § Photo uploads). On success the API returns `{ path, url }`; stored files are `.jpg` after processing.
 
 ### Automatic photo backup (Google Drive, daily)
 
@@ -153,39 +163,26 @@ Notes:
 
 ## Running the environment (Windows batch launcher)
 
-You can launch the full environment from the project root with:
+From the project root, **`start_mobile_garage.bat`** runs **`npm run start`**, which starts:
 
-```bat
-start_mobile_garage.bat
-```
+- Inventory server (web UI + API on port **3011** by default)
+- Print service (polls `API_URL` from `print-service/.env`)
 
-This runs `npm run start` and starts:
-- Inventory server (web UI + API)
-- Print service
+First-time setup is in **[INSTALL.md](INSTALL.md)** (dependencies, `.env`, DYMO). After that, either double-click the batch file or run **`npm start`** in the repo root.
 
 ## Phase 1 – Environment & Core Functions
 
 ### Project structure
 
-- **server/** – Node.js backend (Express, SQLite, image upload)
+- **server/** – Node.js backend (Express, SQLite, image upload, web UI)
 - **print-service/** – Windows print service (polls for jobs, drives label printers)
-- **android/** – Android app (Kotlin, Jetpack Compose, CameraX)
+- **android/** – Android app (Kotlin, Jetpack Compose)
 
-### Quick start
+### Install and run (summary)
 
-**Start both server and print service (one command)**
-
-From the project root:
-
-```bash
-npm install          # once: installs concurrently + server/print-service deps
-cd server && npm install && npm run db:migrate   # once: DB setup
-cd ..
-npm start            # runs server + print service in one terminal
-```
-
-- Server: http://localhost:3011 (Web UI and API)
-- Print service: polls for jobs and prints item labels via Python DYMO when `DYMO_LABEL_PATH` is set in `print-service/.env` (see [DYMO_SETUP.md](DYMO_SETUP.md))
+1. Follow **[INSTALL.md](INSTALL.md)** (`install-requirements.ps1`, `server/.env`, `print-service/.env`).
+2. From the repo root: **`npm start`** (or **`start_mobile_garage.bat`**).
+3. Open **http://localhost:3011** — Web UI and API. Print service uses **`DYMO_LABEL_PATH`** / SDK settings in **`print-service/.env`** — see [DYMO_SETUP.md](DYMO_SETUP.md) and [PRINT_SETUP.md](PRINT_SETUP.md).
 
 ### Settings menu (template navigation)
 
@@ -200,59 +197,20 @@ Template env variables used by the app:
 - `DYMO_LABEL_PATH` or `DYMO_LABEL_TEMPLATE` for small/item labels
 - `DYMO_LARGE_LABEL_PATH` or `DYMO_LARGE_LABEL_TEMPLATE` for large/storage labels
 
-**Or run separately**
+**Run server or print service alone (advanced)**
 
-**1. Backend (run on your dev machine or Hetzner server)**
+After a normal [INSTALL.md](INSTALL.md) setup you usually use **`npm start`**. To run components separately:
 
-```bash
-cd server
-npm install
-npm run db:migrate   # creates data/inventory.db
-npm run dev          # http://localhost:3011
-```
+| Component | Commands / notes |
+|-----------|------------------|
+| **Server only** | `cd server` → `npm install` → `npm run db:migrate` (once) → `npm run dev` — Web UI and API at **http://localhost:3011** |
+| **Print service only** | `cd print-service` → `npm install` → configure **`.env`** (`API_URL`, printers, DYMO) → `npm start` — without printer names, jobs may log only (dry-run) |
+| **Android** | `cd android` → `.\gradlew assembleDebug` — set API base URL (e.g. PC LAN IP or emulator `10.0.2.2:3011`); see [INSTALL.md](INSTALL.md) § Android |
 
-- Web UI: http://localhost:3011  
-- API: http://localhost:3011/api/
+**First-time data**
 
-**2. Create a storage unit (via Web UI)**
-
-- Go to "Add Storage"
-- Building: RS or WS  
-- Type: Rack, Cabinet, Bag  
-- Identifier: A, B, C, D  
-- Spaces: 1–24 (your choice)  
-- Creates locations like `RS-Rack-A-1` … `RS-Rack-A-N` and queues a large label
-
-**3. Add items**
-
-- Use Web UI or Android app
-- Name, location, optional photo
-- Queues a small label for the item
-
-**4. Windows print service**
-
-```bash
-cd print-service
-npm install
-# Set env vars (or create .env):
-# API_URL=http://your-server:3011
-# LARGE_PRINTER="Your Large Label Printer Name"
-# SMALL_PRINTER="Your Small Label Printer Name"
-npm start
-```
-
-Without `LARGE_PRINTER`/`SMALL_PRINTER`, jobs are logged only (dry-run).
-
-**5. Android app**
-
-```bash
-cd android
-./gradlew assembleDebug
-# Install on device/emulator
-```
-
-- Emulator: server at `10.0.2.2:3011`  
-- Physical device: set your PC’s LAN IP in the app (or via BuildConfig)
+- **Add Storage** (Web UI): building (e.g. RS), type (Rack/Cabinet/Bag), identifier, spaces — creates locations like `RS-Rack-A-1` … and queues a **large** label.
+- **Add Item**: name, location, optional photo — queues a **small** label (Web UI or Android).
 
 ### API summary
 

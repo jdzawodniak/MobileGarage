@@ -2,6 +2,8 @@
 
 The print service runs on the **Windows PC** where your two label printers are connected. It polls the inventory server for pending print jobs and sends them to the correct printer (large labels for storage areas, small labels for items).
 
+**New install:** complete **[INSTALL.md](INSTALL.md)** first (Node, `install-requirements.ps1`, `print-service/.env`, `npm start`). This document goes deeper on DYMO CLI, template object names, and printer discovery.
+
 ---
 
 ## 1. Prerequisites

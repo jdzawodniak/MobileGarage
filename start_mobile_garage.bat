@@ -1,4 +1,7 @@
 @echo off
+REM Mobile Garage – start inventory server + print service (after INSTALL.md setup).
+REM Requires: npm install at repo root, server\.env, print-service\.env
+
 setlocal
 
 cd /d "%~dp0"

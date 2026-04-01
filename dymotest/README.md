@@ -2,6 +2,8 @@
 
 Print to **left** and **right** rolls of the DYMO LabelWriter 450 Twin Turbo from Python using the DYMO Label Framework COM API on Windows.
 
+**Project install:** the main app setup is in **[../INSTALL.md](../INSTALL.md)**. The root **`install-requirements.ps1`** can create this folder’s **`.venv`** automatically. This README is for running **dymotest** examples in isolation.
+
 ## Setup
 
 1. **Python**  

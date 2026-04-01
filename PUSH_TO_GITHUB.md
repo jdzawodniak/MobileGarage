@@ -1,5 +1,7 @@
 # Push this project to GitHub
 
+After you or someone else **clones** the repo on a Windows PC, follow **[INSTALL.md](INSTALL.md)** for a full local installation (Node, `.env`, print service).
+
 1. **Create a new repository on GitHub** (if you haven’t already):
    - Go to https://github.com/new
    - Repository name: `MobileGarage` (or any name you prefer)

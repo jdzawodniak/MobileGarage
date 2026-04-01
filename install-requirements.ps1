@@ -1,10 +1,17 @@
-# Mobile Garage – install Node and Python dependencies on Windows.
-# From the repo folder, run:  .\install-requirements.ps1
+# Mobile Garage – install Node and Python dependencies on Windows (step 3 of full setup).
+#
+# From the repo root, run:  .\install-requirements.ps1
 # (PowerShell requires .\ to run a script in the current directory.)
 # If scripts are blocked:  Set-ExecutionPolicy -Scope CurrentUser RemoteSigned -Force
 #
-# After install: optional Google Drive backups — see README.md (scripts/backup-db-to-drive.ps1,
-# scripts/backup-photos-to-drive.ps1). Server image uploads use the sharp npm package (installed with server deps).
+# Complete installation order (prerequisites, .env, start, verify, Android, firewall):
+#   see INSTALL.md in this repository.
+#
+# After install: copy server\.env.example → server\.env and print-service\.env.example → print-service\.env,
+# then npm start or start_mobile_garage.bat (INSTALL.md §7).
+#
+# Optional Google Drive backups: README.md — scripts/backup-db-to-drive.ps1, scripts/backup-photos-to-drive.ps1.
+# Server photos use sharp (+ related packages); installed with server npm install.
 
 param(
     [switch] $SkipPython,

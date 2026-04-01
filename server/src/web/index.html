@@ -69,6 +69,7 @@
         <label>
           Photo (optional)
           <input type="file" id="item-photo" accept="image/*" style="margin-top:0.25rem">
+          <button type="button" id="item-photo-webcam" class="btn-inline">Use webcam</button>
           <span id="photo-uploaded" class="muted"></span>
         </label>
         <button type="submit">Create & Print Small Label</button>
@@ -103,6 +104,21 @@
       </div>
     </section>
   </main>
+
+  <div id="webcam-modal" class="webcam-modal" aria-hidden="true">
+    <div class="webcam-modal__backdrop" id="webcam-modal-backdrop"></div>
+    <div class="webcam-modal__panel" role="dialog" aria-labelledby="webcam-modal-title">
+      <h3 id="webcam-modal-title">Take photo</h3>
+      <p class="muted webcam-modal__hint">Uses your default camera (e.g. USB webcam). Allow access when the browser asks.</p>
+      <video id="webcam-video" playsinline autoplay muted></video>
+      <canvas id="webcam-canvas" hidden></canvas>
+      <p id="webcam-error" class="error webcam-modal__error" hidden></p>
+      <div class="webcam-modal__actions">
+        <button type="button" id="webcam-capture">Capture</button>
+        <button type="button" id="webcam-cancel" class="secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>

@@ -181,3 +181,80 @@ button.danger:hover {
 #settings-template-status p {
   margin: 0.35rem 0;
 }
+
+.btn-inline {
+  display: inline-block;
+  margin-top: 0.35rem;
+  margin-left: 0;
+  vertical-align: middle;
+}
+
+.webcam-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.webcam-modal.is-open {
+  display: flex;
+}
+
+.webcam-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.webcam-modal__panel {
+  position: relative;
+  z-index: 1;
+  background: var(--card);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  max-width: min(640px, 100%);
+  border: 1px solid var(--accent);
+}
+
+.webcam-modal__panel h3 {
+  margin: 0 0 0.35rem 0;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.webcam-modal__hint {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.8rem;
+}
+
+#webcam-video {
+  display: block;
+  width: 100%;
+  max-height: min(50vh, 360px);
+  object-fit: contain;
+  border-radius: 8px;
+  background: #0d1117;
+}
+
+.webcam-modal__error {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.85rem;
+}
+
+.webcam-modal__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+button.secondary {
+  background: #2a3f5a;
+}
+
+button.secondary:hover {
+  filter: brightness(1.12);
+}

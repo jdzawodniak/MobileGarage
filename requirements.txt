@@ -1,2 +1,5 @@
-pywin32==311
+# Mobile Garage – Python dependencies for Windows (DYMO COM / tooling).
+# Installed by install-requirements.ps1 or: py -3.12 -m pip install -r requirements.txt
+# Full setup: see INSTALL.md §3–§4.
 
+pywin32==311
