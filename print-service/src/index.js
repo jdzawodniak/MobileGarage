@@ -417,8 +417,11 @@ async function printToPrinter(printerName, text) {
 }
 
 let pollCount = 0;
+let isPolling = false;
 
 async function poll() {
+  if (isPolling) return;
+  isPolling = true;
   try {
     const jobs = await fetchApi('/api/print-jobs/pending?limit=5');
     if (jobs.length > 0) {
@@ -443,6 +446,8 @@ async function poll() {
     }
   } catch (err) {
     console.error('Poll error:', err.message);
+  } finally {
+    isPolling = false;
   }
 }
 

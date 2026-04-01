@@ -37,7 +37,41 @@ router.post('/reprint', (req, res) => {
   if (!job_type || !reference_type || !reference_id) {
     return res.status(400).json({ error: 'job_type, reference_type, reference_id required' });
   }
-  const id = enqueuePrintJob(job_type, reference_type, reference_id);
+  const refId = Number(reference_id);
+  if (!Number.isFinite(refId)) {
+    return res.status(400).json({ error: 'reference_id must be a number' });
+  }
+
+  let payload = null;
+  if (job_type === 'small' && reference_type === 'item') {
+    const item = db.prepare(`
+      SELECT i.id, i.name, l.location_code
+      FROM items i
+      JOIN locations l ON i.location_id = l.id
+      WHERE i.id = ?
+    `).get(refId);
+    if (!item) return res.status(404).json({ error: 'Item not found' });
+    payload = {
+      name: item.name,
+      location_code: item.location_code,
+      printer_roll: 'left',
+    };
+  } else if (job_type === 'large' && reference_type === 'storage_unit') {
+    const unit = db.prepare(`
+      SELECT id, building_code, storage_type, storage_id, spaces_count
+      FROM storage_units
+      WHERE id = ?
+    `).get(refId);
+    if (!unit) return res.status(404).json({ error: 'Storage unit not found' });
+    payload = {
+      building_code: unit.building_code,
+      storage_type: unit.storage_type,
+      storage_id: unit.storage_id,
+      spaces_count: unit.spaces_count,
+    };
+  }
+
+  const id = enqueuePrintJob(job_type, reference_type, refId, payload);
   res.status(201).json({ id, status: 'pending' });
 });
 

@@ -130,7 +130,7 @@ fun AddItemScreen(navController: NavController) {
                     scope.launch {
                         try {
                             var photoPath: String? = null
-                            photoFile?.takeIf { it.exists() }?.let { file ->
+                            photoFile?.takeIf { it.exists() && it.length() > 0 }?.let { file ->
                                 photoPath = withContext(Dispatchers.IO) {
                                     val part = MultipartBody.Part.createFormData(
                                         "photo",

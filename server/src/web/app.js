@@ -2,6 +2,20 @@ const API = '/api';
 
 let allItemsForSearch = [];
 
+/** Safe URL for a stored photo_path (relative to server/uploads). */
+function uploadsUrl(photoPath) {
+  if (!photoPath || typeof photoPath !== 'string') return '';
+  const p = photoPath.replace(/^\/+/, '').replace(/\\/g, '/');
+  if (!p || p.includes('..')) return '';
+  return '/uploads/' + p.split('/').map(encodeURIComponent).join('/');
+}
+
+function thumbImgTag(photoPath) {
+  const u = uploadsUrl(photoPath);
+  if (!u) return '';
+  return `<img class="item-thumb" src="${u}" alt="" width="48" height="48" loading="lazy" decoding="async">`;
+}
+
 async function fetchJson(path, opts = {}) {
   const r = await fetch(API + path, {
     ...opts,
@@ -46,9 +60,10 @@ function renderSearchTable(query) {
   }
 
   container.innerHTML = `
-    <table class="table">
+    <table class="table table-search-items">
       <thead>
         <tr>
+          <th class="col-photo"></th>
           <th>Name</th>
           <th>Location</th>
           <th>Notes</th>
@@ -59,6 +74,7 @@ function renderSearchTable(query) {
           .map(
             (i) => `
           <tr data-id="${i.id}">
+            <td class="col-photo">${thumbImgTag(i.photo_path) || '<span class="muted">—</span>'}</td>
             <td>${i.name}</td>
             <td>${i.location_code || ''}</td>
             <td>${i.notes || ''}</td>
@@ -139,9 +155,12 @@ async function loadItems() {
   const rows = await fetchJson('/items' + params);
   const list = document.getElementById('items-list');
   list.innerHTML = rows.map((i) => `
-    <div class="card" data-id="${i.id}" style="cursor:pointer">
-      <h3>${i.name}</h3>
-      <p>${i.location_code}</p>
+    <div class="card card-item-row" data-id="${i.id}" style="cursor:pointer">
+      <div class="card-item-thumb">${thumbImgTag(i.photo_path) || '<span class="item-thumb-spacer" aria-hidden="true"></span>'}</div>
+      <div class="card-item-body">
+        <h3>${i.name}</h3>
+        <p>${i.location_code}</p>
+      </div>
     </div>
   `).join('');
   list.querySelectorAll('.card').forEach((c) => {
@@ -180,7 +199,12 @@ async function showLocationDetail(id) {
 async function showItemDetail(id) {
   const item = await fetchJson('/items/' + id);
   document.getElementById('item-detail-title').textContent = item.name;
+  const photoUrl = uploadsUrl(item.photo_path);
+  const photoBlock = photoUrl
+    ? `<div class="item-detail-photo-wrap"><img class="item-detail-photo" src="${photoUrl}" alt="" loading="lazy" decoding="async"></div>`
+    : '';
   document.getElementById('item-detail-content').innerHTML = `
+    ${photoBlock}
     <p><strong>Location:</strong> ${item.location_code}</p>
     <p>${item.notes || ''}</p>
   `;
@@ -322,17 +346,19 @@ document.getElementById('form-item').addEventListener('submit', async (e) => {
   const fd = new FormData(e.target);
   const data = Object.fromEntries(fd.entries());
   const result = document.getElementById('item-result');
-  let photoPath = null;
   const fileInput = document.getElementById('item-photo');
-  if (fileInput.files?.[0]) {
-    const formData = new FormData();
-    formData.append('photo', fileInput.files[0]);
-    const up = await fetch(API + '/photos', { method: 'POST', body: formData });
-    if (!up.ok) throw new Error((await up.json().catch(() => ({}))).error || 'Upload failed');
-    const { path: p } = await up.json();
-    photoPath = p;
-  }
   try {
+    let photoPath = null;
+    if (fileInput.files?.[0]) {
+      const formData = new FormData();
+      formData.append('photo', fileInput.files[0]);
+      const up = await fetch(API + '/photos', { method: 'POST', body: formData });
+      const body = await up.json().catch(() => ({}));
+      if (!up.ok) {
+        throw new Error(body.error || up.statusText || 'Photo upload failed');
+      }
+      photoPath = body.path;
+    }
     const res = await fetchJson('/items', {
       method: 'POST',
       body: JSON.stringify({
