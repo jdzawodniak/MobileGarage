@@ -72,7 +72,12 @@ function resolveTemplatePath(template, baseDir = process.cwd()) {
 
 // Use Python COM for small labels when we have a .label path and the Python package exists (default for DYMO).
 const _labelPath = resolveTemplatePath(DYMO_LABEL_TEMPLATE, MOBILE_GARAGE_ROOT);
-const usePythonForSmallLabels = Boolean(_labelPath && fs.existsSync(path.join(MOBILE_GARAGE_ROOT, 'src', 'mobile_garage')));
+const _largeLabelPath = resolveTemplatePath(DYMO_LARGE_LABEL_TEMPLATE, MOBILE_GARAGE_ROOT);
+const _hasMobileGaragePy = fs.existsSync(path.join(MOBILE_GARAGE_ROOT, 'src', 'mobile_garage'));
+const usePythonForSmallLabels = Boolean(_labelPath && _hasMobileGaragePy);
+const usePythonForLargeLabels = Boolean(
+  DYMO_LARGE_LABEL_TEMPLATE && _largeLabelPath && fs.existsSync(_largeLabelPath) && _hasMobileGaragePy
+);
 
 async function fetchApi(apiPath, opts = {}) {
   const url = API_URL + apiPath;
@@ -113,14 +118,16 @@ async function printViaDymoCli(printerName, tray, labelPath, objData) {
 }
 
 /**
- * Print item label via Python DYMO module: open .label, set field1=name and field2=location, print to DYMO (COM). No Notepad.
- * Requires DYMO_LABEL_PATH or DYMO_LABEL_TEMPLATE and mobile_garage package under MOBILE_GARAGE_ROOT.
+ * Print item or storage label via Python DYMO: open .label, set field1 / field2, print via COM.
+ * @param {string | null} explicitLabelPath - If set, use this template (e.g. large label file); else small-label path from env.
  */
-async function printViaPythonDymo(name, locationCode, roll) {
+async function printViaPythonDymo(name, locationCode, roll, explicitLabelPath = null) {
   const { spawn } = await import('child_process');
-  const labelPath = resolveTemplatePath(DYMO_LABEL_TEMPLATE, MOBILE_GARAGE_ROOT);
+  const labelPath = explicitLabelPath
+    ? resolveTemplatePath(explicitLabelPath, MOBILE_GARAGE_ROOT)
+    : resolveTemplatePath(DYMO_LABEL_TEMPLATE, MOBILE_GARAGE_ROOT);
   if (!labelPath) {
-    throw new Error('DYMO_LABEL_PATH or DYMO_LABEL_TEMPLATE must be set for Python DYMO');
+    throw new Error('DYMO_LABEL_PATH or DYMO_LABEL_TEMPLATE must be set for Python DYMO (or pass explicitLabelPath)');
   }
   const args = [
     '-m', 'mobile_garage.cli.print_item_label',
@@ -130,11 +137,17 @@ async function printViaPythonDymo(name, locationCode, roll) {
     '--label-path', labelPath,
   ];
   const srcDir = path.join(MOBILE_GARAGE_ROOT, 'src');
+  // Python reads DYMO_PRINTER_LEFT / DYMO_PRINTER_RIGHT (see src/mobile_garage/config/dymo_settings.py).
+  // .env usually defines SMALL_PRINTER_* only — pass those through so SelectPrinter gets the exact queue name.
   const env = {
     ...process.env,
     DYMO_LABEL_PATH: labelPath,
     PYTHONPATH: srcDir,
   };
+  if (SMALL_PRINTER_LEFT) env.DYMO_PRINTER_LEFT = SMALL_PRINTER_LEFT;
+  if (SMALL_PRINTER_RIGHT) env.DYMO_PRINTER_RIGHT = SMALL_PRINTER_RIGHT;
+  if (!env.DYMO_PRINTER_LEFT && SMALL_PRINTER) env.DYMO_PRINTER_LEFT = SMALL_PRINTER;
+  if (!env.DYMO_PRINTER_RIGHT && SMALL_PRINTER) env.DYMO_PRINTER_RIGHT = SMALL_PRINTER;
   return new Promise((resolve, reject) => {
     const child = spawn(DYMO_PYTHON_PATH, args, {
       cwd: MOBILE_GARAGE_ROOT,
@@ -172,7 +185,22 @@ async function processJob(job) {
         : `Storage Unit #${job.reference_id}`;
     const spacesLine = `Spaces 1-${payload.spaces_count || 24}`;
 
-    // Prefer a dedicated large-label DYMO template if configured.
+    // Same Python + COM path as item labels: Twin Turbo large labels use the RIGHT roll (see README).
+    if (usePythonForLargeLabels) {
+      console.log(
+        `[PRINT] Sending LARGE job ${job.id} via Python DYMO (right roll) – "${storageCode}" / ${spacesLine}`
+      );
+      try {
+        await printViaPythonDymo(storageCode, spacesLine, 'right', _largeLabelPath);
+        console.log(`[OK] Sent large label (job ${job.id}) to DYMO`);
+        return true;
+      } catch (err) {
+        console.error('Python DYMO large-label error:', err.message || err);
+        return false;
+      }
+    }
+
+    // Optional: DymoPrint SDK CLI when DYMO_CLI_PATH is set.
     if (useDymoCli && (DYMO_LARGE_LABEL_TEMPLATE || DYMO_LABEL_TEMPLATE) && (SMALL_PRINTER_RIGHT || SMALL_PRINTER)) {
       const printerName = SMALL_PRINTER_RIGHT || SMALL_PRINTER;
       const templatePath = resolveTemplatePath(DYMO_LARGE_LABEL_TEMPLATE || DYMO_LABEL_TEMPLATE);
@@ -426,13 +454,27 @@ if (usePythonForSmallLabels) {
   const labelExists = _labelPath && fs.existsSync(_labelPath);
   console.log('Small labels: Python DYMO (COM). label:', _labelPath, labelExists ? '(exists)' : '(FILE NOT FOUND – check path in print-service/.env)');
   if (!labelExists) console.warn('WARN: Label file not found. Item labels will fail until DYMO_LABEL_PATH in print-service/.env points to a valid .label file.');
-} else if (DYMO_LABEL_TEMPLATE && !fs.existsSync(path.join(MOBILE_GARAGE_ROOT, 'src', 'mobile_garage'))) {
+} else if (DYMO_LABEL_TEMPLATE && !_hasMobileGaragePy) {
   console.warn('WARN: DYMO_LABEL_PATH set but mobile_garage not found – start from project root (npm start) or set MOBILE_GARAGE_ROOT.');
 } else {
   console.log('Small labels: Add DYMO_LABEL_PATH=E:\\YourPath\\file.label to print-service/.env to print item labels to the DYMO.');
 }
+if (usePythonForLargeLabels) {
+  console.log('Large labels: Python DYMO (COM), right roll. template:', _largeLabelPath);
+} else if (DYMO_LARGE_LABEL_TEMPLATE) {
+  const exists = _largeLabelPath && fs.existsSync(_largeLabelPath);
+  console.log(
+    'Large labels: DYMO_LARGE_LABEL_PATH set but',
+    exists ? 'Python package missing?' : 'file not found – create the .label or fix path.',
+    _largeLabelPath || '(empty)'
+  );
+} else {
+  console.log(
+    'Large labels: set DYMO_LARGE_LABEL_PATH to a .label file (field1 + field2) for Twin Turbo right roll, or use DYMO_CLI_PATH / LARGE_PRINTER fallbacks.'
+  );
+}
 if (!LARGE_PRINTER || !SMALL_PRINTER) {
-  console.log('LARGE_PRINTER / SMALL_PRINTER not set – large/small dry-run (small uses Python when DYMO_LABEL_PATH is set)');
+  console.log('LARGE_PRINTER / SMALL_PRINTER not set – legacy PrintTo dry-run paths may apply');
 }
 
 poll();
